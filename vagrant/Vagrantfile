@@ -1,0 +1,39 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# types = ['master', 'infra', 'app']
+types = ['master']
+
+ENV['VAGRANT_DEFAULT_PROVIDER'] = 'libvirt'
+
+Vagrant.require_version ">= 1.7.0"
+Vagrant.configure("2") do |config|
+
+  types.each do |t|
+    3.times do |i|
+      config.vm.define "k3s-#{t}-#{i}" do |config|
+      config.vm.hostname = "k3s-#{t}-#{i}"
+      #config.vm.box = "ubuntu-22.04-amd64"
+      config.vm.box = "generic/ubuntu2304"
+      config.vm.box_check_update = true
+      config.ssh.insert_key = true
+      config.vm.network "private_network", ip: "192.168.120.1#{ types.find_index(t) }#{ i }", :libvirt__network_name => 'dev-libvirt'
+      # config.vm.provision :ansible do |ansible|
+      #   ansible.verbose = "v"
+      #   ansible.limit = "all"
+      #   ansible.config_file = "../ansible/ansible.cfg"
+      #   ansible.inventory_path = "../ansible/inventory/hosts.ini"
+      #   ansible.playbook = "../ansible/playbooks/site.yml"
+      #end
+      config.vm.provider :libvirt do |v|
+        v.memory = 4096
+        v.cpus = 2
+        v.default_prefix="dev-"
+        v.memorybacking :access, :mode => "shared"
+        v.channel :type => 'unix', :target_name => 'org.qemu.guest_agent.0', :target_type => 'virtio'
+      end
+      # config.vm.provision :shell, path: "dev-project.sh", privileged: false
+      end
+    end
+  end
+end
